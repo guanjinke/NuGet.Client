@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using NuGet.Packaging.Core;
 using NuGet.ProjectManagement;
 using NuGet.ProjectManagement.Projects;
 using NuGet.ProjectModel;
+using NuGet.VisualStudio.Implementation.Resources;
 
 namespace NuGet.VisualStudio
 {
@@ -170,8 +172,9 @@ namespace NuGet.VisualStudio
             catch (Exception e) when (e is KeyNotFoundException || e is InvalidOperationException)
             {
                 var projectUniqueName = NuGetProject.GetUniqueNameOrName(nuGetProject);
-                _logger.Value.LogError($"Failed creating a path context for \"{projectUniqueName}\". Reason: {e.Message}.");
-                throw new InvalidOperationException(projectUniqueName, e);
+                var errorMessage = string.Format(CultureInfo.CurrentCulture, VsResources.PathContext_CreateContextError, projectUniqueName, e.Message);
+                _logger.Value.LogError(errorMessage);
+                throw new InvalidOperationException(errorMessage, e);
             }
 
             return context;
@@ -197,7 +200,7 @@ namespace NuGet.VisualStudio
 
             if ((lockFile?.PackageFolders?.Count ?? 0) == 0)
             {
-                throw new InvalidOperationException("The lock file doesn't exist or it's an older format that doesn't have the package folders property persisted.");
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, VsResources.PathContext_LockFileError));
             }
 
             // The user packages folder is always the first package folder. Subsequent package folders are always
@@ -228,7 +231,7 @@ namespace NuGet.VisualStudio
                 var packageInstallPath = fppr.GetPackageDirectory(pid.Id, pid.Version);
                 if (string.IsNullOrEmpty(packageInstallPath))
                 {
-                    throw new KeyNotFoundException($"Package directory for \"{pid}\" is not found");
+                    throw new KeyNotFoundException(string.Format(CultureInfo.CurrentCulture, VsResources.PathContext_PackageDirectoryNotFound, pid));
                 }
 
                 trie[packageInstallPath] = packageInstallPath;
@@ -257,7 +260,7 @@ namespace NuGet.VisualStudio
                 var packageInstallPath = msbuildNuGetProject.FolderNuGetProject.GetInstalledPath(pid);
                 if (string.IsNullOrEmpty(packageInstallPath))
                 {
-                    throw new KeyNotFoundException($"Package directory for \"{pid}\" is not found");
+                    throw new KeyNotFoundException(string.Format(CultureInfo.CurrentCulture, VsResources.PathContext_PackageDirectoryNotFound, pid));
                 }
 
                 trie[packageInstallPath] = packageInstallPath;
